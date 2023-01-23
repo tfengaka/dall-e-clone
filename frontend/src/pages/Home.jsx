@@ -1,5 +1,7 @@
 import React, { Fragment, useState } from "react";
+import { useEffect } from "react";
 import { Card, FormField, Loader } from "../components";
+import axiosClient from "../apis/axiosClient";
 
 const RenderCards = ({ data, title }) => {
 	if (data?.length > 0)
@@ -13,7 +15,45 @@ const RenderCards = ({ data, title }) => {
 function Home() {
 	const [loading, setLoading] = useState(false);
 	const [searchText, setSearchText] = useState("");
+	const [searchResults, setSearchResults] = useState(null);
+	const [searchTimeOut, setSearchTimeOut] = useState(null);
 	const [posts, setPosts] = useState(null);
+
+	useEffect(() => {
+		(async function () {
+			setLoading(true);
+			try {
+				const postList = await axiosClient.get("/post");
+				if (postList.status === 201) {
+					setPosts(postList.data);
+				}
+			} catch (error) {
+				alert(error);
+			} finally {
+				setLoading(false);
+			}
+		})();
+	}, []);
+
+	const handleSeachChange = (e) => {
+		clearTimeout(searchTimeOut);
+		setSearchText(e.target.value);
+		setSearchTimeOut(
+			setTimeout(() => {
+				const searchResult = posts.filter((item) =>
+					item.name
+						.toLowerCase()
+						.includes(
+							searchText.toLowerCase() ||
+								item.prompt.toLowerCase().includes(searchText.toLowerCase())
+						)
+				);
+
+				setSearchResult(searchResult);
+			}, 500)
+		);
+	};
+
 	return (
 		<section className="max-w-7xl mx-auto">
 			<div>
@@ -27,7 +67,14 @@ function Home() {
 				</p>
 			</div>
 			<div className="mt-16">
-				<FormField />
+				<FormField
+					label="Search Post"
+					type="text"
+					name="text"
+					value={searchText}
+					placeholder="Search Posts"
+					onChange={handleSeachChange}
+				/>
 			</div>
 			<div className="mt-10">
 				{loading ? (
@@ -44,9 +91,12 @@ function Home() {
 						)}
 						<div className="grid lg:grid-cols-4 sm:grid-cols-3 xs:grid-cols-2 grid-cols-1 gap-3">
 							{searchText ? (
-								<RenderCards data={[]} title="No Search Result Found!" />
+								<RenderCards
+									data={searchResults}
+									title="No Search Result Found!"
+								/>
 							) : (
-								<RenderCards data={[]} title="No Post Found!" />
+								<RenderCards data={posts} title="No Post Found!" />
 							)}
 						</div>
 					</Fragment>

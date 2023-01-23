@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { preview } from "../assets";
 import { FormField, Loader } from "../components";
 import { getRandomPrompt } from "../utils";
+import axiosClient from "../apis/axiosClient";
 
 function CreatePost() {
 	const navigate = useNavigate();
@@ -15,14 +16,47 @@ function CreatePost() {
 	const [generatingImg, setGeneratingImg] = useState(false);
 	const [loading, setLoading] = useState(false);
 
-	const handleSubmit = () => {};
+	const handleSubmit = async (event) => {
+		event.preventDefault();
+		if (form.photo && form.prompt) {
+			setLoading(true);
+			try {
+				await axiosClient.post("/post", form);
+				navigate("/");
+			} catch (error) {
+				alert(error);
+			} finally {
+				setLoading(false);
+			}
+		} else {
+			alert("Please enter a prompt and generate an image");
+		}
+	};
+
 	const handleChange = (event) =>
 		setForm({ ...form, [event.target.name]: event.target.value });
+
 	const handleSurpriseMe = () => {
 		const randomPrompt = getRandomPrompt(form.prompt);
 		setForm({ ...form, prompt: randomPrompt });
 	};
-	const generateImage = () => {};
+
+	const generateImage = async () => {
+		if (form.prompt) {
+			try {
+				setGeneratingImg(true);
+				const response = await axiosClient.post("/dalle", {
+					prompt: form.prompt,
+				});
+				setForm({ ...form, photo: `data:image/jpeg;base64,${response.photo}` });
+			} catch (error) {
+				alert(error);
+				console.error(error);
+			} finally {
+				setGeneratingImg(false);
+			}
+		}
+	};
 
 	return (
 		<section className="max-w-7xl mx-auto">
